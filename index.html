@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部落客邀約管理系統</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDbo6RVuSlaMBVqh9bw87_TKPKcEdFSz_0",
+    authDomain: "fir-eb424.firebaseapp.com",
+    projectId: "fir-eb424",
+    storageBucket: "fir-eb424.firebasestorage.app",
+    messagingSenderId: "767759923244",
+    appId: "1:767759923244:web:4ada3950a1972d5f257989"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const DATA_DOC = doc(db, "campaign", "shared_data");
+  window._fbSave = async function(state) {
+    try { await setDoc(DATA_DOC, { payload: JSON.stringify(state) }); } catch(e) { console.error(e); }
+  };
+  window._fbLoad = async function() {
+    try { const snap = await getDoc(DATA_DOC); if(snap.exists()) return JSON.parse(snap.data().payload); } catch(e) { console.error(e); }
+    return null;
+  };
+  window._fbReady = true;
+  document.dispatchEvent(new Event("fb-ready"));
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+.container{max-width:1500px;margin:0 auto;padding:1.5rem}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;background:#fff;padding:1rem 1.5rem;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);flex-wrap:wrap}
+.top-bar h1{font-size:18px;font-weight:600;flex:1;color:#1a1a1a}
+.top-bar h1 span{color:#1D6F42}
+.nav-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.nav-tab{padding:7px 16px;font-size:13px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#666;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s}
+.nav-tab:hover{background:#f0f0ec;color:#1a1a1a}
+.nav-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.sync-status{font-size:12px;padding:4px 10px;border-radius:20px;font-weight:500}
+.sync-status.ok{background:#EDFAF3;color:#1a7a45}
+.sync-status.saving{background:#FFF8E6;color:#9a6200}
+.btn{padding:7px 16px;font-size:13px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .15s;font-weight:500}
+.btn:hover{background:#f0f0ec;border-color:#bbb}
+.btn.primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn.primary:hover{background:#333}
+.btn.excel{background:#1D6F42;color:#fff;border-color:#1D6F42}
+.btn.excel:hover{background:#155a34}
+.btn.sm{padding:4px 10px;font-size:12px}
+.icon-btn{width:30px;height:30px;border:1px solid #e8e8e8;background:#fff;cursor:pointer;color:#666;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;transition:all .15s}
+.icon-btn:hover{background:#f0f0ec;color:#1a1a1a}
+.icon-btn.del:hover{background:#fdf2f1;color:#c0392b;border-color:#e8b4b0}
+/* badges */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge.blue{background:#EBF4FF;color:#1a56a0}
+.badge.green{background:#EDFAF3;color:#1a7a45}
+.badge.teal{background:#E3F6F0;color:#0d6e55}
+.badge.amber{background:#FFF8E6;color:#9a6200}
+.badge.gray{background:#F2F2EE;color:#555}
+.badge.purple{background:#F3EEFF;color:#6b21a8}
+.badge.red{background:#FFF0F0;color:#b91c1c}
+.badge.pink{background:#FFF0F6;color:#be185d}
+.badge.orange{background:#FFF4ED;color:#c2410c}
+/* status badges */
+.status-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.status-badge:hover{opacity:.8}
+.s-洽談中{background:#FFF8E6;color:#9a6200;border:1px solid #fcd34d}
+.s-已確認{background:#EBF4FF;color:#1a56a0;border:1px solid #93c5fd}
+.s-審稿中{background:#F3EEFF;color:#6b21a8;border:1px solid #c4b5fd}
+.s-已發文{background:#EDFAF3;color:#1a7a45;border:1px solid #6ee7b7}
+.s-已結案{background:#F2F2EE;color:#555;border:1px solid #d1d5db}
+/* proj blocks */
+.proj-block{background:#fff;border:1px solid #e8e8e3;border-radius:12px;margin-bottom:1rem;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.proj-block.expanded{border-color:#c8c8c0}
+.proj-header-row{display:flex;align-items:center;gap:10px;padding:1rem 1.25rem;cursor:pointer;user-select:none;transition:background .12s;flex-wrap:wrap}
+.proj-header-row:hover{background:#fafaf8}
+.chevron{font-size:13px;color:#999;transition:transform .2s;display:inline-flex;flex-shrink:0}
+.proj-block.expanded .chevron{transform:rotate(90deg)}
+.proj-title-area{flex:1;min-width:0}
+.proj-name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.proj-main-name{font-size:15px;font-weight:600;color:#1a1a1a}
+.proj-brand{font-size:13px;color:#888}
+.proj-chips{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.proj-actions-row{display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap}
+.proj-body{border-top:1px solid #f0f0ea;display:none}
+.proj-block.expanded .proj-body{display:block}
+.proj-body-toolbar{display:flex;align-items:center;gap:8px;padding:.75rem 1.25rem;background:#fafaf8;border-bottom:1px solid #f0f0ea;flex-wrap:wrap}
+.proj-body-toolbar span{font-size:13px;color:#888;flex:1}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:1100px}
+th{padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:#888;background:#fafaf8;border-bottom:1px solid #f0f0ea;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+td{padding:9px 12px;border-bottom:1px solid #f5f5f0;color:#1a1a1a;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fdfdf9}
+.link-a{color:#1a56a0;text-decoration:none;font-size:12px}
+.link-a:hover{text-decoration:underline}
+.note-cell{font-size:12px;color:#666;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* analysis */
+.analysis-panel{padding:1.25rem;background:#fafaf8;border-top:1px solid #f0f0ea}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1rem}
+.stat-card{background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid #ececec}
+.stat-label{font-size:10px;color:#999;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.stat-val{font-size:22px;font-weight:600;color:#1a1a1a}
+.stat-sub{font-size:11px;color:#aaa;margin-top:3px}
+.top-rank-title{font-size:13px;font-weight:600;color:#555;margin-bottom:.6rem;margin-top:1rem}
+.progress-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+.progress-bar-bg{flex:1;height:6px;background:#ececec;border-radius:3px;overflow:hidden}
+.progress-bar-fill{height:100%;background:#1D6F42;border-radius:3px}
+/* overview page */
+.overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-bottom:1.5rem}
+.overview-card{background:#fff;border-radius:12px;border:1px solid #e8e8e3;padding:1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.overview-card h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.overview-card .brand{font-size:12px;color:#888;margin-bottom:1rem}
+.overview-mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini-stat{background:#fafaf8;border-radius:8px;padding:.6rem .8rem}
+.mini-stat-label{font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.mini-stat-val{font-size:18px;font-weight:600;color:#1a1a1a;margin-top:2px}
+.cp-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:.5rem}
+.cp-table th{padding:7px 10px;font-size:11px;font-weight:600;color:#888;background:#fafaf8;border-bottom:1px solid #f0f0ea;text-align:left}
+.cp-table td{padding:7px 10px;border-bottom:1px solid #f5f5f0;vertical-align:middle}
+.cp-table tr:last-child td{border-bottom:none}
+/* KOL DB */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;background:#fff;padding:1rem 1.25rem;border-radius:12px;border:1px solid #e8e8e3;align-items:flex-end}
+.filter-field{display:flex;flex-direction:column;gap:4px;min-width:130px}
+.filter-field label{font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.filter-field input,.filter-field select{font-size:13px;border:1px solid #ddd;border-radius:8px;padding:6px 10px;background:#fff;color:#1a1a1a;font-family:inherit}
+.kol-db-table{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+.kol-db-table th{padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:#888;background:#fafaf8;border-bottom:1px solid #f0f0ea;white-space:nowrap}
+.kol-db-table td{padding:9px 12px;border-bottom:1px solid #f5f5f0;color:#1a1a1a;vertical-align:top}
+.kol-db-table tr:last-child td{border-bottom:none}
+.kol-db-table tr:hover td{background:#fdfdf9}
+.price-list{display:flex;flex-direction:column;gap:3px}
+.price-item{display:flex;gap:6px;align-items:center;font-size:12px}
+.price-type{color:#888;min-width:70px}
+.price-val{font-weight:500;color:#1D6F42}
+.add-price-row{display:flex;gap:6px;margin-top:6px;align-items:center}
+.add-price-row input{font-size:12px;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-family:inherit;background:#fff;color:#1a1a1a}
+.add-price-row input:focus{outline:none;border-color:#1D6F42}
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;z-index:9999;padding:2rem 1rem;overflow-y:auto}
+.modal{background:#fff;border-radius:14px;border:1px solid #ddd;padding:1.75rem;width:100%;max-width:560px;position:relative;margin:auto;flex-shrink:0;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:1.25rem;color:#1a1a1a}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid.single{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:#666;font-weight:600}
+.field input,.field select,.field textarea{font-size:14px;border:1px solid #ddd;border-radius:8px;padding:8px 11px;background:#fff;color:#1a1a1a;font-family:inherit;width:100%;transition:border-color .12s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#1D6F42;box-shadow:0 0 0 3px rgba(29,111,66,.1)}
+.field textarea{resize:vertical;min-height:60px}
+.kol-type-group{display:flex;gap:8px;flex-wrap:wrap}
+.kol-type-btn{padding:6px 14px;font-size:13px;border:1px solid #ddd;border-radius:20px;background:#fff;color:#666;cursor:pointer;transition:all .15s;font-family:inherit;font-weight:500}
+.kol-type-btn:hover{border-color:#aaa;color:#1a1a1a}
+.kol-type-btn.active{font-weight:600}
+.kol-type-btn[data-type="部落格"].active{background:#EBF4FF;border-color:#1a56a0;color:#1a56a0}
+.kol-type-btn[data-type="IG網紅"].active{background:#FFF0F6;border-color:#be185d;color:#be185d}
+.kol-type-btn[data-type="YT網紅"].active{background:#FFF0F0;border-color:#b91c1c;color:#b91c1c}
+.kol-type-btn[data-type="TikTok"].active{background:#F3EEFF;border-color:#6b21a8;color:#6b21a8}
+.kol-type-btn[data-type="其他"].active{background:#F2F2EE;border-color:#555;color:#555}
+.section-label{font-size:11px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;grid-column:1/-1;padding-bottom:7px;border-bottom:1px solid #f0f0ea;margin-top:4px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;padding-top:1rem;border-top:1px solid #f0f0ea}
+.empty-row td{text-align:center;color:#bbb;padding:2.5rem!important;font-size:13px}
+.no-data{text-align:center;padding:4rem 1rem;color:#bbb;font-size:14px}
+.loading{text-align:center;padding:4rem;color:#888;font-size:15px}
+/* alert */
+.alert-banner{background:#FFF8E6;border:1px solid #fcd34d;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem}
+.alert-banner h4{font-size:13px;font-weight:600;color:#9a6200;margin-bottom:.5rem}
+.alert-item{font-size:13px;color:#92400e;padding:3px 0;display:flex;align-items:center;gap:6px}
+/* status dropdown */
+.status-select{font-size:12px;border:1px solid #ddd;border-radius:20px;padding:3px 8px;font-family:inherit;cursor:pointer;font-weight:600;background:#fff}
+.page{display:none}
+.page.active{display:block}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top-bar">
+    <h1>📋 部落客邀約管理 <span>系統</span></h1>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchPage('projects',this)">📁 專案管理</button>
+      <button class="nav-tab" onclick="switchPage('overview',this)">📊 跨專案總覽</button>
+      <button class="nav-tab" onclick="switchPage('koldb',this)">👥 KOL 資料庫</button>
+    </div>
+    <span class="sync-status saving" id="sync-status">⏳ 連線中...</span>
+    <button class="btn primary" id="btn-add-main" onclick="openNewProject()">＋ 新增專案</button>
+  </div>
+
+  <!-- 提醒 banner -->
+  <div id="alert-banner" class="alert-banner" style="display:none">
+    <h4>⏰ 即將到期提醒</h4>
+    <div id="alert-items"></div>
+  </div>
+
+  <!-- 專案管理 -->
+  <div id="page-projects" class="page active">
+    <div id="proj-container"><div class="loading">🔄 載入雲端資料中...</div></div>
+  </div>
+
+  <!-- 跨專案總覽 -->
+  <div id="page-overview" class="page">
+    <div id="overview-container"></div>
+  </div>
+
+  <!-- KOL 資料庫 -->
+  <div id="page-koldb" class="page">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label>搜尋名稱</label>
+        <input type="text" id="filter-name" placeholder="輸入名稱..." oninput="renderKolDb()">
+      </div>
+      <div class="filter-field">
+        <label>KOL 類型</label>
+        <select id="filter-type" onchange="renderKolDb()">
+          <option value="">全部</option>
+          <option>部落格</option><option>IG網紅</option><option>YT網紅</option><option>TikTok</option><option>其他</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label>粉絲數下限</label>
+        <input type="number" id="filter-followers-min" placeholder="0" oninput="renderKolDb()">
+      </div>
+      <div class="filter-field">
+        <label>粉絲數上限</label>
+        <input type="number" id="filter-followers-max" placeholder="不限" oninput="renderKolDb()">
+      </div>
+      <button class="btn" onclick="clearFilters()">清除篩選</button>
+      <div style="flex:1"></div>
+      <button class="btn primary" onclick="openAddKol()">＋ 新增 KOL</button>
+    </div>
+    <div style="background:#fff;border-radius:12px;border:1px solid #e8e8e3;overflow:hidden">
+      <div class="table-wrap">
+        <table class="kol-db-table">
+          <thead><tr><th>類型</th><th>名稱</th><th>連結</th><th>粉絲數</th><th>報價明細</th><th>備註</th><th>操作</th></tr></thead>
+          <tbody id="koldb-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 專案 modal -->
+<div id="modal-project" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <h3 id="proj-modal-title">新增專案</h3>
+    <div class="form-grid single">
+      <div class="field"><label>專案名稱 *</label><input id="proj-name-input" type="text" placeholder="例：2025 夏季美食企劃"></div>
+      <div class="field"><label>品牌 / 客戶</label><input id="proj-brand-input" type="text" placeholder="例：ABC 餐廳"></div>
+      <div class="field"><label>專案備註</label><textarea id="proj-note-input" placeholder="選填備註..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-project')">取消</button>
+      <button class="btn primary" onclick="saveProject()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 部落客 modal -->
+<div id="modal-blogger" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <h3 id="blogger-modal-title">新增 KOL</h3>
+    <div class="form-grid">
+      <div class="section-label">基本資料</div>
+      <div class="field" style="grid-column:1/-1">
+        <label>KOL 類型</label>
+        <div class="kol-type-group" id="kol-type-group">
+          <button class="kol-type-btn" data-type="部落格" onclick="selectKolType(this)">📝 部落格</button>
+          <button class="kol-type-btn" data-type="IG網紅" onclick="selectKolType(this)">📸 IG 網紅</button>
+          <button class="kol-type-btn" data-type="YT網紅" onclick="selectKolType(this)">🎬 YT 網紅</button>
+          <button class="kol-type-btn" data-type="TikTok" onclick="selectKolType(this)">🎵 TikTok</button>
+          <button class="kol-type-btn" data-type="其他" onclick="selectKolType(this)">⭐ 其他</button>
+        </div>
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>合作狀態</label>
+        <select id="b-status">
+          <option value="洽談中">洽談中</option>
+          <option value="已確認">已確認</option>
+          <option value="審稿中">審稿中</option>
+          <option value="已發文">已發文</option>
+          <option value="已結案">已結案</option>
+        </select>
+      </div>
+      <div class="field"><label>邀約平台</label><input id="b-platform" type="text" placeholder="例：自行邀約、合作社"></div>
+      <div class="field"><label>部落客名稱 *</label><input id="b-name" type="text" placeholder="帳號名稱"></div>
+      <div class="field" style="grid-column:1/-1"><label>IG / 頻道網址</label><input id="b-ig" type="text" placeholder="https://www.instagram.com/..."></div>
+      <div class="field"><label>粉絲數</label><input id="b-followers" type="number" placeholder="0" min="0"></div>
+      <div class="field"><label>聯絡人電話</label><input id="b-phone" type="text" placeholder="0912-345-678"></div>
+      <div class="field"><label>報價費用 (NT$)</label><input id="b-quote" type="number" placeholder="0" min="0"></div>
+      <div class="field"><label>實際費用 (NT$)</label><input id="b-actual" type="number" placeholder="0" min="0"></div>
+      <div class="section-label">合作時程</div>
+      <div class="field"><label>體驗日期</label><input id="b-exp-date" type="date"></div>
+      <div class="field"><label>審稿日期</label><input id="b-review-date" type="date"></div>
+      <div class="field"><label>發文日期</label><input id="b-post-date" type="date"></div>
+      <div class="field" style="grid-column:1/-1"><label>發布貼文連結</label><input id="b-post-link" type="text" placeholder="https://..."></div>
+      <div class="section-label">成效數據</div>
+      <div class="field"><label>Reels / 影片瀏覽量</label><input id="b-views" type="number" placeholder="0" min="0"></div>
+      <div class="field"><label>按讚數</label><input id="b-likes" type="number" placeholder="0" min="0"></div>
+      <div class="field"><label>留言數</label><input id="b-comments" type="number" placeholder="0" min="0"></div>
+      <div class="field"><label>分享數</label><input id="b-shares" type="number" placeholder="0" min="0"></div>
+      <div class="section-label">備註</div>
+      <div class="field" style="grid-column:1/-1"><label>備註</label><textarea id="b-note" placeholder="例：需要提供試吃、特殊要求、溝通紀錄..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-blogger')">取消</button>
+      <button class="btn primary" onclick="saveBlogger()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- KOL DB modal -->
+<div id="modal-kol" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <h3 id="kol-modal-title">新增 KOL 至資料庫</h3>
+    <div class="form-grid">
+      <div class="section-label">基本資料</div>
+      <div class="field" style="grid-column:1/-1">
+        <label>KOL 類型</label>
+        <div class="kol-type-group" id="kol-db-type-group">
+          <button class="kol-type-btn" data-type="部落格" onclick="selectKolDbType(this)">📝 部落格</button>
+          <button class="kol-type-btn" data-type="IG網紅" onclick="selectKolDbType(this)">📸 IG 網紅</button>
+          <button class="kol-type-btn" data-type="YT網紅" onclick="selectKolDbType(this)">🎬 YT 網紅</button>
+          <button class="kol-type-btn" data-type="TikTok" onclick="selectKolDbType(this)">🎵 TikTok</button>
+          <button class="kol-type-btn" data-type="其他" onclick="selectKolDbType(this)">⭐ 其他</button>
+        </div>
+      </div>
+      <div class="field"><label>名稱 *</label><input id="kol-name" type="text" placeholder="帳號名稱"></div>
+      <div class="field"><label>粉絲數</label><input id="kol-followers" type="number" placeholder="0" min="0"></div>
+      <div class="field" style="grid-column:1/-1"><label>頻道 / IG 連結</label><input id="kol-link" type="text" placeholder="https://..."></div>
+      <div class="section-label">報價明細（可新增多筆）</div>
+      <div style="grid-column:1/-1">
+        <div id="kol-prices-container"></div>
+        <button class="btn sm" style="margin-top:8px" onclick="addPriceRow()">＋ 新增報價</button>
+      </div>
+      <div class="section-label">備註</div>
+      <div class="field" style="grid-column:1/-1"><label>備註</label><textarea id="kol-note" placeholder="合作紀錄、特殊條件..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-kol')">取消</button>
+      <button class="btn primary" onclick="saveKol()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let state = {projects:[], kolDb:[]};
+let expandedProjs={}, showAnalysis={}, saveTimer=null;
+let selectedKolType='', selectedKolDbType='', editingKolId=null;
+let currentPrices=[];
+
+// ── 頁面切換 ──
+function switchPage(name, el){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const btnAdd = document.getElementById('btn-add-main');
+  if(name==='projects'){btnAdd.textContent='＋ 新增專案';btnAdd.onclick=openNewProject;btnAdd.style.display='';}
+  else if(name==='koldb'){btnAdd.style.display='none';}
+  else{btnAdd.style.display='none';}
+  if(name==='overview') renderOverview();
+  if(name==='koldb') renderKolDb();
+}
+
+// ── Firebase ──
+function setSyncStatus(type,msg){const el=document.getElementById('sync-status');el.className='sync-status '+type;el.textContent=msg;}
+async function loadState(){
+  if(!window._fbReady) await new Promise(r=>document.addEventListener('fb-ready',r,{once:true}));
+  const data=await window._fbLoad();
+  if(data){state=data;if(!state.kolDb)state.kolDb=[];if(state.projects.length)expandedProjs[state.projects[0].id]=true;}
+  setSyncStatus('ok','☁️ 已同步');
+  checkAlerts();
+  render();
+  renderKolDb();
+}
+function saveState(){setSyncStatus('saving','💾 儲存中...');clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{await window._fbSave(state);setSyncStatus('ok','☁️ 已同步');},800);}
+
+// ── 提醒 ──
+function checkAlerts(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const items=[];
+  state.projects.forEach(p=>{
+    (p.bloggers||[]).forEach(b=>{
+      if(b.status==='已結案') return;
+      ['reviewDate','postDate'].forEach(field=>{
+        if(!b[field]) return;
+        const d=new Date(b[field]); d.setHours(0,0,0,0);
+        const diff=Math.ceil((d-today)/(1000*60*60*24));
+        if(diff>=0&&diff<=3){
+          const label=field==='reviewDate'?'審稿日':'發文日';
+          const urgency=diff===0?'🔴 今天到期':diff===1?'🟠 明天到期':`🟡 ${diff}天後到期`;
+          items.push(`${urgency}｜【${p.name}】${b.name} — ${label} ${b[field]}`);
+        }
+      });
+    });
+  });
+  const banner=document.getElementById('alert-banner');
+  if(items.length){
+    document.getElementById('alert-items').innerHTML=items.map(i=>`<div class="alert-item">⚠️ ${i}</div>`).join('');
+    banner.style.display='block';
+  } else { banner.style.display='none'; }
+}
+
+// ── 工具 ──
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function esc(s){const d=document.createElement('div');d.appendChild(document.createTextNode(s||''));return d.innerHTML;}
+function kolTypeBadge(type){
+  if(!type)return '-';
+  const map={'部落格':'blue','IG網紅':'pink','YT網紅':'red','TikTok':'purple','其他':'gray'};
+  const icons={'部落格':'📝','IG網紅':'📸','YT網紅':'🎬','TikTok':'🎵','其他':'⭐'};
+  return `<span class="badge ${map[type]||'gray'}">${icons[type]||''} ${type}</span>`;
+}
+function statusBadge(status,projId,blogId){
+  const s=status||'洽談中';
+  return `<select class="status-select s-${s}" onchange="changeStatus('${projId}','${blogId}',this)" onclick="event.stopPropagation()">
+    ${['洽談中','已確認','審稿中','已發文','已結案'].map(x=>`<option${x===s?' selected':''}>${x}</option>`).join('')}
+  </select>`;
+}
+function changeStatus(projId,blogId,sel){
+  const p=state.projects.find(x=>x.id===projId);if(!p)return;
+  const b=p.bloggers.find(x=>x.id===blogId);if(!b)return;
+  b.status=sel.value;
+  sel.className=`status-select s-${sel.value}`;
+  saveState();checkAlerts();
+}
+function selectKolType(btn){document.querySelectorAll('#kol-type-group .kol-type-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');selectedKolType=btn.dataset.type;}
+function selectKolDbType(btn){document.querySelectorAll('#kol-db-type-group .kol-type-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');selectedKolDbType=btn.dataset.type;}
+
+// ── CSV 匯出 ──
+function downloadCSV(sheets,filename){
+  let csv='\uFEFF';
+  sheets.forEach((sheet,si)=>{
+    if(si>0)csv+='\n\n=== '+sheet.name+' ===\n';
+    else csv+='=== '+sheet.name+' ===\n';
+    sheet.data.forEach(row=>{
+      if(!row||row.length===0){csv+='\n';return;}
+      csv+=row.map(cell=>{const v=(cell===null||cell===undefined)?'':String(cell);if(v.includes(',')||v.includes('"')||v.includes('\n'))return'"'+v.replace(/"/g,'""')+'"';return v;}).join(',')+'\n';
+    });
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function exportExcel(projId){
+  const p=state.projects.find(x=>x.id===projId);if(!p)return;
+  const bs=p.bloggers||[];
+  const tQ=bs.reduce((s,b)=>s+(parseFloat(b.quote)||0),0),tA=bs.reduce((s,b)=>s+(parseFloat(b.actual)||0),0),tV=bs.reduce((s,b)=>s+(parseFloat(b.views)||0),0),tL=bs.reduce((s,b)=>s+(parseFloat(b.likes)||0),0),tC=bs.reduce((s,b)=>s+(parseFloat(b.comments)||0),0),tS=bs.reduce((s,b)=>s+(parseFloat(b.shares)||0),0);
+  const posted=bs.filter(b=>b.postLink).length,tE=tL+tC+tS,er=tV?((tE/tV)*100).toFixed(2):0,cpv=tV&&tA?(tA/tV).toFixed(2):0,cpc=tC&&tA?Math.round(tA/tC):0;
+  const sheet1=[['狀態','KOL類型','邀約平台','部落客名稱','連結','粉絲數','報價(NT$)','實際費用(NT$)','電話','體驗日','審稿日','發文日','貼文連結','瀏覽量','按讚','留言','分享','互動率(%)','備註'],
+    ...bs.map(b=>{const v=parseFloat(b.views)||0,eng=(parseFloat(b.likes)||0)+(parseFloat(b.comments)||0)+(parseFloat(b.shares)||0);return[b.status||'',b.kolType||'',b.platform||'',b.name||'',b.ig||'',parseFloat(b.followers)||0,parseFloat(b.quote)||0,parseFloat(b.actual)||0,b.phone||'',b.expDate||'',b.reviewDate||'',b.postDate||'',b.postLink||'',v,parseFloat(b.likes)||0,parseFloat(b.comments)||0,parseFloat(b.shares)||0,v?parseFloat(((eng/v)*100).toFixed(1)):0,b.note||''];})];
+  const sheet2=[['專案名稱',p.name],['品牌/客戶',p.brand||'-'],['匯出日期',new Date().toLocaleDateString('zh-TW')],[],
+    ['【邀約概況】'],['邀約人數',bs.length],['已發文人數',posted],[],
+    ['【費用統計】'],['總報價(NT$)',tQ],['總實際費用(NT$)',tA],['節省(NT$)',tQ-tA],[],
+    ['【成效數據】'],['總瀏覽量',tV],['總按讚',tL],['總留言',tC],['總分享',tS],['整體互動率(%)',parseFloat(er)],[],
+    ['【效益分析】'],['每次瀏覽成本(NT$)',parseFloat(cpv)||0],['每則留言成本(NT$)',cpc],['平均每人費用(NT$)',bs.length?Math.round(tA/bs.length):0],[],
+    ['【CP值排行（每元換瀏覽）】'],['名稱','實際費用','瀏覽量','每元瀏覽數'],
+    ...[...bs].filter(b=>b.actual&&b.views).sort((a,b)=>(parseFloat(b.views)||0)/(parseFloat(b.actual)||1)-(parseFloat(a.views)||0)/(parseFloat(a.actual)||1)).map(b=>[b.name,parseFloat(b.actual)||0,parseFloat(b.views)||0,parseFloat(b.actual)?((parseFloat(b.views)||0)/(parseFloat(b.actual))).toFixed(2):0])];
+  downloadCSV([{name:'部落客明細',data:sheet1},{name:'成效分析',data:sheet2}],`${p.name}_部落客成效報告_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.csv`);
+}
+
+// ── 專案管理 render ──
+function render(){
+  const c=document.getElementById('proj-container');
+  if(!state.projects.length){c.innerHTML='<div class="no-data">📋<br><br>尚無專案，點擊右上角「新增專案」開始</div>';return;}
+  c.innerHTML=state.projects.map(p=>renderProject(p)).join('');
+}
+function renderProject(p){
+  const bs=p.bloggers||[],expanded=!!expandedProjs[p.id],showA=!!showAnalysis[p.id];
+  const tA=bs.reduce((s,b)=>s+(parseFloat(b.actual)||0),0),tV=bs.reduce((s,b)=>s+(parseFloat(b.views)||0),0),tL=bs.reduce((s,b)=>s+(parseFloat(b.likes)||0),0),tC=bs.reduce((s,b)=>s+(parseFloat(b.comments)||0),0),tS=bs.reduce((s,b)=>s+(parseFloat(b.shares)||0),0),tQ=bs.reduce((s,b)=>s+(parseFloat(b.quote)||0),0);
+  const posted=bs.filter(b=>b.postLink).length,tE=tL+tC+tS,erOverall=tV?((tE/tV)*100).toFixed(2):0,cpv=tV&&tA?(tA/tV).toFixed(2):0;
+  const rows=bs.length?bs.map(b=>{
+    const eng=(parseFloat(b.likes)||0)+(parseFloat(b.comments)||0)+(parseFloat(b.shares)||0),v=parseFloat(b.views)||0,er=v?((eng/v)*100).toFixed(1):null;
+    return `<tr>
+      <td>${statusBadge(b.status,p.id,b.id)}</td>
+      <td>${kolTypeBadge(b.kolType)}</td>
+      <td>${b.platform?`<span class="badge gray">${esc(b.platform)}</span>`:'-'}</td>
+      <td style="font-weight:600">${esc(b.name)}</td>
+      <td>${b.ig?`<a class="link-a" href="${esc(b.ig)}" target="_blank">🔗</a>`:'-'}</td>
+      <td>${b.followers?Number(b.followers).toLocaleString():'-'}</td>
+      <td>${b.quote?'NT$'+Number(b.quote).toLocaleString():'-'}</td>
+      <td>${b.actual?'<span class="badge green">NT$'+Number(b.actual).toLocaleString()+'</span>':'-'}</td>
+      <td style="white-space:nowrap;font-size:12px">${b.phone||'-'}</td>
+      <td style="font-size:12px">${b.expDate||'-'}</td>
+      <td style="font-size:12px">${b.reviewDate||'-'}</td>
+      <td style="font-size:12px">${b.postDate||'-'}</td>
+      <td>${b.postLink?`<a class="link-a" href="${esc(b.postLink)}" target="_blank">🔗</a>`:'-'}</td>
+      <td>${v?v.toLocaleString():'-'}</td>
+      <td>${b.likes?Number(b.likes).toLocaleString():'-'}</td>
+      <td>${b.comments?Number(b.comments).toLocaleString():'-'}</td>
+      <td>${b.shares?Number(b.shares).toLocaleString():'-'}</td>
+      <td>${er?`<span class="badge ${parseFloat(er)>=3?'teal':'amber'}">${er}%</span>`:'-'}</td>
+      <td class="note-cell" title="${esc(b.note||'')}">${b.note?esc(b.note):'-'}</td>
+      <td style="white-space:nowrap">
+        <button class="icon-btn" onclick="editBlogger('${p.id}','${b.id}')">✏️</button>
+        <button class="icon-btn del" onclick="deleteBlogger('${p.id}','${b.id}')">🗑️</button>
+      </td></tr>`;
+  }).join(''):`<tr class="empty-row"><td colspan="20">尚無 KOL，點擊「新增 KOL」開始</td></tr>`;
+
+  // CP值排行
+  const cpTop=[...bs].filter(b=>parseFloat(b.actual)>0&&parseFloat(b.views)>0).sort((a,b)=>(parseFloat(b.views)/parseFloat(b.actual))-(parseFloat(a.views)/parseFloat(a.actual))).slice(0,5);
+  const top=[...bs].filter(b=>b.views).sort((a,b)=>(parseFloat(b.views)||0)-(parseFloat(a.views)||0)).slice(0,3);
+
+  const analysisHtml=showA?`<div class="analysis-panel">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">邀約人數</div><div class="stat-val">${bs.length}</div><div class="stat-sub">已發文 ${posted} 人</div></div>
+      <div class="stat-card"><div class="stat-label">總報價</div><div class="stat-val" style="font-size:16px">NT$${Math.round(tQ).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">總實際費用</div><div class="stat-val" style="font-size:16px">NT$${Math.round(tA).toLocaleString()}</div>${tQ>tA?`<div class="stat-sub">節省 NT$${Math.round(tQ-tA).toLocaleString()}</div>`:''}</div>
+      <div class="stat-card"><div class="stat-label">總瀏覽量</div><div class="stat-val">${tV.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">總按讚</div><div class="stat-val">${tL.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">總留言</div><div class="stat-val">${tC.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">總分享</div><div class="stat-val">${tS.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">整體互動率</div><div class="stat-val">${erOverall}%</div></div>
+      ${cpv?`<div class="stat-card"><div class="stat-label">每次瀏覽成本</div><div class="stat-val" style="font-size:16px">NT$${cpv}</div></div>`:''}
+    </div>
+    ${top.length?`<div class="top-rank-title">🏆 瀏覽量排行</div>${top.map((b,i)=>{const pct=tV?Math.round((parseFloat(b.views)||0)/tV*100):0;return`<div class="progress-row"><span style="min-width:20px;color:#aaa">#${i+1}</span><span style="min-width:110px;font-weight:600">${esc(b.name)}</span><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%"></div></div><span style="min-width:75px;text-align:right;font-size:12px">${(parseFloat(b.views)||0).toLocaleString()}</span><span class="badge blue">${pct}%</span></div>`;}).join('')}`:''}
+    ${cpTop.length?`<div class="top-rank-title">💰 CP值排行（每元換最多瀏覽）</div>
+    <table class="cp-table"><thead><tr><th>#</th><th>名稱</th><th>實際費用</th><th>瀏覽量</th><th>每元瀏覽數</th></tr></thead><tbody>
+    ${cpTop.map((b,i)=>{const cpv2=parseFloat(b.actual)>0?((parseFloat(b.views)||0)/parseFloat(b.actual)).toFixed(2):0;return`<tr><td style="color:#aaa">#${i+1}</td><td style="font-weight:600">${esc(b.name)}</td><td>NT$${Number(b.actual).toLocaleString()}</td><td>${Number(b.views).toLocaleString()}</td><td><span class="badge ${i===0?'green':'teal'}">${cpv2}</span></td></tr>`;}).join('')}
+    </tbody></table>`:''}
+  </div>`:'';
+
+  return `<div class="proj-block${expanded?' expanded':''}" id="proj-${p.id}">
+    <div class="proj-header-row" onclick="toggleExpand('${p.id}')">
+      <span class="chevron">▶</span>
+      <div class="proj-title-area">
+        <div class="proj-name-row"><span class="proj-main-name">${esc(p.name)}</span>${p.brand?`<span class="proj-brand">· ${esc(p.brand)}</span>`:''}</div>
+        <div class="proj-chips">
+          <span class="badge blue">${bs.length} 位 KOL</span>
+          ${tA?`<span class="badge green">NT$${Math.round(tA).toLocaleString()}</span>`:''}
+          ${tV?`<span class="badge teal">${tV.toLocaleString()} 次瀏覽</span>`:''}
+          ${bs.filter(b=>b.status==='洽談中').length?`<span class="badge amber">洽談中 ${bs.filter(b=>b.status==='洽談中').length}</span>`:''}
+          ${bs.filter(b=>b.status==='審稿中').length?`<span class="badge purple">審稿中 ${bs.filter(b=>b.status==='審稿中').length}</span>`:''}
+        </div>
+      </div>
+      <div class="proj-actions-row" onclick="event.stopPropagation()">
+        <button class="btn${showA?' primary':''}" onclick="toggleAnalysis('${p.id}')">📊 成效</button>
+        <button class="btn excel" onclick="exportExcel('${p.id}')">📥 匯出報表</button>
+        <button class="icon-btn" onclick="editProject('${p.id}')">✏️</button>
+        <button class="icon-btn del" onclick="deleteProject('${p.id}')">🗑️</button>
+      </div>
+    </div>
+    <div class="proj-body">
+      <div class="proj-body-toolbar">
+        <span>${bs.length} 位 KOL</span>
+        <button class="btn primary" onclick="openAddBlogger('${p.id}')">＋ 新增 KOL</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>狀態</th><th>類型</th><th>平台</th><th>名稱</th><th>連結</th><th>粉絲數</th><th>報價</th><th>實際費用</th><th>電話</th><th>體驗日</th><th>審稿日</th><th>發文日</th><th>貼文</th><th>瀏覽量</th><th>按讚</th><th>留言</th><th>分享</th><th>互動率</th><th>備註</th><th>操作</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      ${analysisHtml}
+    </div>
+  </div>`;
+}
+
+// ── 跨專案總覽 ──
+function renderOverview(){
+  const c=document.getElementById('overview-container');
+  if(!state.projects.length){c.innerHTML='<div class="no-data">尚無專案資料</div>';return;}
+  const sorted=[...state.projects].sort((a,b)=>{
+    const aV=(a.bloggers||[]).reduce((s,b)=>s+(parseFloat(b.views)||0),0);
+    const bV=(b.bloggers||[]).reduce((s,b)=>s+(parseFloat(b.views)||0),0);
+    return bV-aV;
+  });
+  const allTotalA=sorted.reduce((s,p)=>(p.bloggers||[]).reduce((ss,b)=>ss+(parseFloat(b.actual)||0),s),0);
+  const allTotalV=sorted.reduce((s,p)=>(p.bloggers||[]).reduce((ss,b)=>ss+(parseFloat(b.views)||0),s),0);
+
+  let html=`<div class="stats-grid" style="margin-bottom:1.5rem">
+    <div class="stat-card"><div class="stat-label">總專案數</div><div class="stat-val">${state.projects.length}</div></div>
+    <div class="stat-card"><div class="stat-label">總 KOL 數</div><div class="stat-val">${state.projects.reduce((s,p)=>s+(p.bloggers||[]).length,0)}</div></div>
+    <div class="stat-card"><div class="stat-label">總費用</div><div class="stat-val" style="font-size:18px">NT$${Math.round(allTotalA).toLocaleString()}</div></div>
+    <div class="stat-card"><div class="stat-label">總瀏覽量</div><div class="stat-val">${allTotalV.toLocaleString()}</div></div>
+    ${allTotalA&&allTotalV?`<div class="stat-card"><div class="stat-label">整體每元瀏覽</div><div class="stat-val">${(allTotalV/allTotalA).toFixed(2)}</div></div>`:''}
+  </div>
+  <div class="overview-grid">`;
+
+  sorted.forEach(p=>{
+    const bs=p.bloggers||[];
+    const tA=bs.reduce((s,b)=>s+(parseFloat(b.actual)||0),0);
+    const tV=bs.reduce((s,b)=>s+(parseFloat(b.views)||0),0);
+    const tL=bs.reduce((s,b)=>s+(parseFloat(b.likes)||0),0);
+    const tC=bs.reduce((s,b)=>s+(parseFloat(b.comments)||0),0);
+    const tS=bs.reduce((s,b)=>s+(parseFloat(b.shares)||0),0);
+    const cpvP=tA&&tV?(tV/tA).toFixed(2):'-';
+    const roi=allTotalV&&tV?Math.round(tV/allTotalV*100):0;
+    html+=`<div class="overview-card">
+      <h3>${esc(p.name)}</h3>
+      <div class="brand">${p.brand?esc(p.brand):'無品牌'} · ${bs.length} 位 KOL</div>
+      <div class="overview-mini-stats">
+        <div class="mini-stat"><div class="mini-stat-label">總費用</div><div class="mini-stat-val" style="font-size:15px">NT$${Math.round(tA).toLocaleString()}</div></div>
+        <div class="mini-stat"><div class="mini-stat-label">總瀏覽量</div><div class="mini-stat-val">${tV.toLocaleString()}</div></div>
+        <div class="mini-stat"><div class="mini-stat-label">每元瀏覽</div><div class="mini-stat-val">${cpvP}</div></div>
+        <div class="mini-stat"><div class="mini-stat-label">瀏覽佔比</div><div class="mini-stat-val">${roi}%</div></div>
+        <div class="mini-stat"><div class="mini-stat-label">總按讚</div><div class="mini-stat-val">${tL.toLocaleString()}</div></div>
+        <div class="mini-stat"><div class="mini-stat-label">總留言</div><div class="mini-stat-val">${tC.toLocaleString()}</div></div>
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  c.innerHTML=html;
+}
+
+// ── KOL 資料庫 ──
+function renderKolDb(){
+  const name=(document.getElementById('filter-name')||{value:''}).value.toLowerCase();
+  const type=(document.getElementById('filter-type')||{value:''}).value;
+  const fMin=parseFloat((document.getElementById('filter-followers-min')||{value:''}).value)||0;
+  const fMax=parseFloat((document.getElementById('filter-followers-max')||{value:''}).value)||Infinity;
+  const db=state.kolDb||[];
+  const filtered=db.filter(k=>{
+    if(name&&!k.name.toLowerCase().includes(name))return false;
+    if(type&&k.kolType!==type)return false;
+    const f=parseFloat(k.followers)||0;
+    if(f<fMin||f>fMax)return false;
+    return true;
+  });
+  const tbody=document.getElementById('koldb-tbody');
+  if(!tbody)return;
+  if(!filtered.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="7">尚無資料</td></tr>`;return;}
+  tbody.innerHTML=filtered.map(k=>{
+    const priceHtml=k.prices&&k.prices.length?k.prices.map(pr=>`<div class="price-item"><span class="price-type">${esc(pr.type)}</span><span class="price-val">NT$${Number(pr.amount).toLocaleString()}</span></div>`).join(''):'<span style="color:#bbb;font-size:12px">未填寫</span>';
+    return `<tr>
+      <td>${kolTypeBadge(k.kolType)}</td>
+      <td style="font-weight:600">${esc(k.name)}</td>
+      <td>${k.link?`<a class="link-a" href="${esc(k.link)}" target="_blank">🔗 連結</a>`:'-'}</td>
+      <td>${k.followers?Number(k.followers).toLocaleString():'-'}</td>
+      <td><div class="price-list">${priceHtml}</div></td>
+      <td class="note-cell" title="${esc(k.note||'')}">${k.note?esc(k.note):'-'}</td>
+      <td style="white-space:nowrap">
+        <button class="icon-btn" onclick="editKol('${k.id}')">✏️</button>
+        <button class="icon-btn del" onclick="deleteKol('${k.id}')">🗑️</button>
+      </td></tr>`;
+  }).join('');
+}
+function clearFilters(){
+  ['filter-name','filter-type','filter-followers-min','filter-followers-max'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderKolDb();
+}
+
+// 報價列
+function addPriceRow(type='',amount=''){
+  const container=document.getElementById('kol-prices-container');
+  const idx=currentPrices.length;
+  currentPrices.push({type,amount});
+  const div=document.createElement('div');
+  div.className='add-price-row';
+  div.id='price-row-'+idx;
+  div.innerHTML=`<input type="text" placeholder="類型（如 IG貼文）" value="${esc(type)}" oninput="currentPrices[${idx}].type=this.value" style="width:130px">
+    <input type="number" placeholder="金額" value="${amount}" oninput="currentPrices[${idx}].amount=this.value" style="width:100px">
+    <button class="icon-btn del" onclick="removePriceRow(${idx},this.parentNode)">✕</button>`;
+  container.appendChild(div);
+}
+function removePriceRow(idx,el){currentPrices[idx]=null;el.remove();}
+
+function openAddKol(){
+  editingKolId=null;
+  document.getElementById('kol-modal-title').textContent='新增 KOL 至資料庫';
+  document.getElementById('kol-name').value='';
+  document.getElementById('kol-followers').value='';
+  document.getElementById('kol-link').value='';
+  document.getElementById('kol-note').value='';
+  document.getElementById('kol-prices-container').innerHTML='';
+  document.querySelectorAll('#kol-db-type-group .kol-type-btn').forEach(b=>b.classList.remove('active'));
+  selectedKolDbType='';
+  currentPrices=[];
+  document.getElementById('modal-kol').style.display='flex';
+}
+function editKol(id){
+  const k=(state.kolDb||[]).find(x=>x.id===id);if(!k)return;
+  editingKolId=id;
+  document.getElementById('kol-modal-title').textContent='編輯 KOL';
+  document.getElementById('kol-name').value=k.name||'';
+  document.getElementById('kol-followers').value=k.followers||'';
+  document.getElementById('kol-link').value=k.link||'';
+  document.getElementById('kol-note').value=k.note||'';
+  document.getElementById('kol-prices-container').innerHTML='';
+  currentPrices=[];
+  selectedKolDbType=k.kolType||'';
+  document.querySelectorAll('#kol-db-type-group .kol-type-btn').forEach(b=>{b.classList.remove('active');if(b.dataset.type===k.kolType)b.classList.add('active');});
+  (k.prices||[]).forEach(pr=>addPriceRow(pr.type,pr.amount));
+  document.getElementById('modal-kol').style.display='flex';
+}
+function saveKol(){
+  const name=document.getElementById('kol-name').value.trim();if(!name){alert('請輸入名稱');return;}
+  if(!state.kolDb)state.kolDb=[];
+  const data={name,kolType:selectedKolDbType,followers:document.getElementById('kol-followers').value,link:document.getElementById('kol-link').value.trim(),note:document.getElementById('kol-note').value.trim(),prices:currentPrices.filter(p=>p&&(p.type||p.amount)).map(p=>({type:p.type||'',amount:parseFloat(p.amount)||0}))};
+  if(editingKolId){const idx=state.kolDb.findIndex(x=>x.id===editingKolId);if(idx>-1)state.kolDb[idx]={...state.kolDb[idx],...data};}
+  else{state.kolDb.push({id:uid(),...data});}
+  saveState();renderKolDb();closeModal('modal-kol');
+}
+function deleteKol(id){if(!confirm('確定要刪除？'))return;state.kolDb=(state.kolDb||[]).filter(x=>x.id!==id);saveState();renderKolDb();}
+
+// ── 專案 CRUD ──
+function toggleExpand(id){expandedProjs[id]=!expandedProjs[id];render();}
+function toggleAnalysis(id){showAnalysis[id]=!showAnalysis[id];if(!expandedProjs[id])expandedProjs[id]=true;render();}
+function openNewProject(){state.editingProjectId=null;['proj-name-input','proj-brand-input','proj-note-input'].forEach(id=>document.getElementById(id).value='');document.getElementById('proj-modal-title').textContent='新增專案';document.getElementById('modal-project').style.display='flex';}
+function editProject(id){const p=state.projects.find(x=>x.id===id);if(!p)return;state.editingProjectId=id;document.getElementById('proj-modal-title').textContent='編輯專案';document.getElementById('proj-name-input').value=p.name||'';document.getElementById('proj-brand-input').value=p.brand||'';document.getElementById('proj-note-input').value=p.note||'';document.getElementById('modal-project').style.display='flex';}
+function saveProject(){const name=document.getElementById('proj-name-input').value.trim();if(!name){alert('請輸入專案名稱');return;}if(state.editingProjectId){const p=state.projects.find(x=>x.id===state.editingProjectId);if(p){p.name=name;p.brand=document.getElementById('proj-brand-input').value.trim();p.note=document.getElementById('proj-note-input').value.trim();}}else{const id=uid();state.projects.push({id,name,brand:document.getElementById('proj-brand-input').value.trim(),note:document.getElementById('proj-note-input').value.trim(),bloggers:[],createdAt:Date.now()});expandedProjs[id]=true;}saveState();render();closeModal('modal-project');}
+function deleteProject(id){if(!confirm('確定要刪除此專案？所有資料將一併刪除。'))return;state.projects=state.projects.filter(x=>x.id!==id);delete expandedProjs[id];delete showAnalysis[id];saveState();render();}
+
+// ── KOL CRUD in project ──
+function openAddBlogger(projId){
+  state.editingBloggerId=null;state.editingBloggerProjId=projId;
+  document.getElementById('blogger-modal-title').textContent='新增 KOL';
+  ['b-platform','b-name','b-ig','b-followers','b-phone','b-quote','b-actual','b-exp-date','b-review-date','b-post-date','b-post-link','b-views','b-likes','b-comments','b-shares','b-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('b-status').value='洽談中';
+  document.querySelectorAll('#kol-type-group .kol-type-btn').forEach(b=>b.classList.remove('active'));
+  selectedKolType='';
+  document.getElementById('modal-blogger').style.display='flex';
+}
+function editBlogger(projId,blogId){
+  const p=state.projects.find(x=>x.id===projId);if(!p)return;
+  const b=p.bloggers.find(x=>x.id===blogId);if(!b)return;
+  state.editingBloggerId=blogId;state.editingBloggerProjId=projId;
+  document.getElementById('blogger-modal-title').textContent='編輯 KOL';
+  document.getElementById('b-platform').value=b.platform||'';
+  document.getElementById('b-name').value=b.name||'';
+  document.getElementById('b-ig').value=b.ig||'';
+  document.getElementById('b-followers').value=b.followers||'';
+  document.getElementById('b-phone').value=b.phone||'';
+  document.getElementById('b-quote').value=b.quote||'';
+  document.getElementById('b-actual').value=b.actual||'';
+  document.getElementById('b-exp-date').value=b.expDate||'';
+  document.getElementById('b-review-date').value=b.reviewDate||'';
+  document.getElementById('b-post-date').value=b.postDate||'';
+  document.getElementById('b-post-link').value=b.postLink||'';
+  document.getElementById('b-views').value=b.views||'';
+  document.getElementById('b-likes').value=b.likes||'';
+  document.getElementById('b-comments').value=b.comments||'';
+  document.getElementById('b-shares').value=b.shares||'';
+  document.getElementById('b-note').value=b.note||'';
+  document.getElementById('b-status').value=b.status||'洽談中';
+  document.querySelectorAll('#kol-type-group .kol-type-btn').forEach(btn=>{btn.classList.remove('active');if(btn.dataset.type===b.kolType)btn.classList.add('active');});
+  selectedKolType=b.kolType||'';
+  document.getElementById('modal-blogger').style.display='flex';
+}
+function saveBlogger(){
+  const name=document.getElementById('b-name').value.trim();if(!name){alert('請輸入名稱');return;}
+  const p=state.projects.find(x=>x.id===state.editingBloggerProjId);if(!p)return;
+  const data={name,kolType:selectedKolType,status:document.getElementById('b-status').value,platform:document.getElementById('b-platform').value.trim(),ig:document.getElementById('b-ig').value.trim(),followers:document.getElementById('b-followers').value,phone:document.getElementById('b-phone').value.trim(),quote:document.getElementById('b-quote').value,actual:document.getElementById('b-actual').value,expDate:document.getElementById('b-exp-date').value,reviewDate:document.getElementById('b-review-date').value,postDate:document.getElementById('b-post-date').value,postLink:document.getElementById('b-post-link').value.trim(),views:document.getElementById('b-views').value,likes:document.getElementById('b-likes').value,comments:document.getElementById('b-comments').value,shares:document.getElementById('b-shares').value,note:document.getElementById('b-note').value.trim()};
+  if(state.editingBloggerId){const idx=p.bloggers.findIndex(x=>x.id===state.editingBloggerId);if(idx>-1)p.bloggers[idx]={...p.bloggers[idx],...data};}
+  else{p.bloggers.push({id:uid(),...data});}
+  saveState();render();closeModal('modal-blogger');checkAlerts();
+}
+function deleteBlogger(projId,blogId){if(!confirm('確定要刪除？'))return;const p=state.projects.find(x=>x.id===projId);if(!p)return;p.bloggers=p.bloggers.filter(x=>x.id!==blogId);saveState();render();}
+function closeModal(id){document.getElementById(id).style.display='none';}
+
+loadState();
+</script>
+</body>
+</html>
